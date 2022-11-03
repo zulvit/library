@@ -1,62 +1,72 @@
 package ru.zulvit;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import ru.zulvit.database.DBLibrary;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import org.jetbrains.annotations.NotNull;
+import ru.zulvit.database.BookDB;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Scanner;
 
 public class Application {
-    public static void main(String[] args) throws SQLException {
-        Scanner scanner = new Scanner(System.in);
+    public static void main(@NotNull String[] args) throws SQLException {
+        Library library;
+        String input;
+        while (true) {
+            Scanner scanner = new Scanner(System.in);
+            System.out.println("""
+                    INPUT COMMAND:
+                    \t/DATABASE
+                    \t/LIBRARY
+                    \t/EXIT""");
+            input = scanner.nextLine();
+            if (input.equalsIgnoreCase("/DATABASE")) {
+                System.out.println("""
+                        Insert command:
+                        \t/PRINT - print current values
+                        \t/DELETE - delete all elements""");
+                String command = scanner.nextLine();
+                switch (command) {
+                    case "/PRINT", "/print" -> {
+                        List<Book> allBooks = BookDB.getAllBooks();
+                        System.out.println(allBooks);
+                    }
+                    case "/DELETE", "/delete" -> BookDB.deleteAll();
+                }
+            } else if (input.equalsIgnoreCase("/LIBRARY")) {
+                try {
+                    System.out.println("Enter name: ");
+                    String titleLibrary = scanner.nextLine();
+                    System.out.println("Enter capacity: ");
+                    int capacity = scanner.nextInt();
 
-        LibraryFactory libraryFactory = new LibraryFactory();
-        System.out.println("You can enter INIT to populate the database with test values if there are none.");
-        System.out.println("Type EXIT to exit from the program.");
+                    Injector injector = Guice.createInjector(new Module());
+                    library = injector.getInstance(LibraryFactory.class).create(
+                            titleLibrary,
+                            capacity,
+                            GsonParser.parseBooks());
 
-        for (; ; ) {
-            System.out.println("Input author's name: ");
-            String input = scanner.nextLine();
-            if (input.equalsIgnoreCase("INIT")) {
-                insertTestValuesInDB();
-            } else if (input.equalsIgnoreCase("EXIT")) {
+                    library.printContent();
+
+                    System.out.println("Saving library to DB...");
+                    List<Book> books = library.getBook();
+                    for (Book book : books) {
+                        BookDB.insert(book);
+                    }
+                    System.out.println("Save complete.");
+
+                    System.out.println("Enter book index: ");
+                    int index = scanner.nextInt();
+                    library.getBook(index - 1).printBook();
+                } catch (LibraryException e) {
+                    e.printStackTrace();
+                }
+            } else if (input.equalsIgnoreCase("/EXIT")) {
                 System.exit(0);
             } else {
-                var library = libraryFactory.createLibrary(input);
-                System.out.println("List of books on request: " + input);
-                Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                System.out.println(gson.toJson(library));
+                System.out.println("Command not found.");
             }
         }
     }
-
-    //region INIT TEST VALUES IN DATABASE
-    static void insertTestValuesInDB() {
-        try {
-            DBLibrary.insertAuthor("Goethe");
-            DBLibrary.insertBook(1, "Faust", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(1, "The suffering of young Werther", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(1, "Reineke fox", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(1, "Forest king", (int) (Math.random() * 1000));
-
-            DBLibrary.insertAuthor("Pushkin");
-            DBLibrary.insertBook(2, "Boris Godunov", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(2, "Prisoner of the Caucasus", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(2, "Eugene Onegin", (int) (Math.random() * 1000));
-
-            DBLibrary.insertAuthor("Tolstoy");
-            DBLibrary.insertBook(3, "War and Peace", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(3, "Anna Karenina", (int) (Math.random() * 1000));
-
-            DBLibrary.insertAuthor("Gogol");
-            DBLibrary.insertBook(4, "Overcoat", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(4, "Taras Bulba", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(4, "Dead Souls", (int) (Math.random() * 1000));
-            DBLibrary.insertBook(4, "Christmas Eve", (int) (Math.random() * 1000));
-        } catch (SQLException e) {
-            System.err.println("The table has already been created, no initialization is needed.");
-        }
-    }
-    //endregion
 }

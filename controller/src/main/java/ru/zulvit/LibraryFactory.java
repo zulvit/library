@@ -1,16 +1,22 @@
 package ru.zulvit;
 
-import org.jetbrains.annotations.NotNull;
-import ru.zulvit.database.DBLibrary;
+import com.google.inject.Inject;
 
-import java.sql.SQLException;
+import java.util.List;
 
-public class LibraryFactory {
-    public Library createLibrary(@NotNull String author) throws SQLException {
-        return new Library(author, DBLibrary.searchBook(author));
+public class LibraryFactory implements FactoryService {
+    @Inject
+    public LibraryFactory() {
     }
 
-    public Book createBook(int id, int authorId, int price, @NotNull String title, @NotNull Author author) throws SQLException {
-        return new Book(id, authorId, title, price, author);
+    @Override
+    public Library create(String title, int capacity, List<Book> book) throws LibraryException {
+        if (title.equals("")) {
+            throw new LibraryException("title can't be void");
+        }
+        if (capacity < book.size()) {
+            throw new LibraryException("Capacity is less than the entered data");
+        }
+        return new Library(title, capacity, book);
     }
 }

@@ -1,12 +1,13 @@
 package ru.zulvit;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.ToString;
 import lombok.Value;
 
 @ToString
-@Value
-//|| Record
+@AllArgsConstructor
+@Data
 public class Author {
-    int id;
-    String name;
+    private String name;
 }
