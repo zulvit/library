@@ -17,6 +17,8 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.24")
     // https://mvnrepository.com/artifact/com.intellij/annotations
     implementation("com.intellij:annotations:12.0")
+    // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.14.0-rc2")
 }
 
 tasks.getByName<Test>("test") {

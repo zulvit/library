@@ -1,7 +1,6 @@
 package ru.zulvit.database;
 
 import org.jetbrains.annotations.NotNull;
-import ru.zulvit.LibraryFactory;
 import ru.zulvit.Author;
 import ru.zulvit.Book;
 
@@ -9,7 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class DBLibrary {
+public final class BookDB {
     static {
         try {
             initDB();
@@ -18,20 +17,11 @@ public final class DBLibrary {
         }
     }
 
-    private final static String SQL_CREATE_BOOK_DB =
-            "CREATE TABLE IF NOT EXISTS book(" +
+    private final static String SQL_CREATE_TABLE_DB =
+            "CREATE TABLE IF NOT EXISTS table1(" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "authorId INTEGER," +
-                    "title TEXT," +
-                    "price INT," +
-                    "FOREIGN KEY (authorId) REFERENCES author(id)," +
-                    "UNIQUE(title))";
-    private final static String SQL_CREATE_AUTHOR_DB =
-            "CREATE TABLE IF NOT EXISTS author(" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "name TEXT," +
-                    "UNIQUE(name))";
-
+                    "name_author TEXT," +
+                    "title_book TEXT)";
 
     /**
      * Creating database tables author & books
@@ -40,8 +30,7 @@ public final class DBLibrary {
     private static void initDB() throws SQLException {
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:memory")) {
             Statement statement = connection.createStatement();
-            statement.executeUpdate(SQL_CREATE_BOOK_DB);
-            statement.executeUpdate(SQL_CREATE_AUTHOR_DB);
+            statement.executeUpdate(SQL_CREATE_TABLE_DB);
         } catch (SQLException e) {
             throw new DatabaseCustomException(e.getMessage(), e.getSQLState(), e.getErrorCode());
         } catch (Exception e) {
@@ -50,33 +39,10 @@ public final class DBLibrary {
         }
     }
 
-    /**
-     * @param name book author's name
-     * @throws DatabaseCustomException error output format: Reason, SQLState, VendorCode
-     */
-    public static void insertAuthor(@NotNull String name) throws DatabaseCustomException {
+    public static void insert(@NotNull Book book) throws DatabaseCustomException {
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:memory")) {
             Statement statement = connection.createStatement();
-            statement.executeUpdate("INSERT INTO author VALUES(null, '" + name + " ')");
-        } catch (SQLException e) {
-            throw new DatabaseCustomException(e.getMessage(), e.getSQLState(), e.getErrorCode());
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException();
-        }
-    }
-
-    /**
-     * @param authorId ID of the author of the book, each author has a unique
-     * @param title    name of the book
-     * @param price    book price, integer value
-     * @throws DatabaseCustomException error output format: Reason, SQLState, VendorCode
-     */
-    public static void insertBook(long authorId, @NotNull String title, int price) throws DatabaseCustomException {
-        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:memory")) {
-            Statement statement = connection.createStatement();
-            statement.executeUpdate("INSERT INTO book VALUES(" +
-                    "null, '" + authorId + "', '" + title + "', '" + price + "')");
+            statement.executeUpdate("INSERT INTO table1 VALUES(null, '" + book.getAuthor().getName() + "', '" + book.getName() + " ')");
         } catch (SQLException e) {
             throw new DatabaseCustomException(e.getMessage(), e.getSQLState(), e.getErrorCode());
         } catch (Exception e) {
@@ -90,25 +56,51 @@ public final class DBLibrary {
      * @return list of books that belong to a specific author
      * @throws DatabaseCustomException error output format: Reason, SQLState, VendorCode
      */
-    public static List<Book> searchBook(@NotNull String authorName) throws DatabaseCustomException {
+    public static List<Book> getBookTitle(@NotNull String authorName) throws DatabaseCustomException {
         List<Book> listOfBooks = new ArrayList<>();
         try (Connection connection = DriverManager.getConnection("jdbc:sqlite:memory")) {
             Statement statement = connection.createStatement();
-            ResultSet resultAuthorId = statement.executeQuery("SELECT id FROM author WHERE name LIKE '%" + authorName + "%'");
-            int idAuthor = resultAuthorId.getInt("id");
-
-            LibraryFactory libraryFactory = new LibraryFactory();
-            ResultSet resultBooks = statement.executeQuery("SELECT * FROM book WHERE authorId =" + idAuthor + "");
+            ResultSet resultBooks = statement.executeQuery("SELECT * FROM table1 WHERE name_author =" + authorName + "");
             while (resultBooks.next()) {
-                listOfBooks.add(libraryFactory.createBook(
-                        resultBooks.getInt("id"),
-                        resultBooks.getInt("authorId"),
-                        resultBooks.getInt("price"),
-                        resultBooks.getString("title"),
-                        new Author(idAuthor, authorName)
-                ));
+                new Book(resultBooks.getString("name_author"), new Author(resultBooks.getString("title_book"))
+                );
             }
             return listOfBooks;
+        } catch (SQLException e) {
+            throw new DatabaseCustomException(e.getMessage(), e.getSQLState(), e.getErrorCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
+    }
+
+    /**
+     * @return getting all the books
+     * @throws DatabaseCustomException error output format: Reason, SQLState, VendorCode
+     */
+    public static List<Book> getAllBooks() throws DatabaseCustomException {
+        List<Book> listOfBooks = new ArrayList<>();
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:memory")) {
+            Statement statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery("SELECT * FROM table1");
+            while (resultSet.next()) {
+                listOfBooks.add(
+                        new Book(resultSet.getString("name_author"), new Author(resultSet.getString("title_book")))
+                );
+            }
+            return listOfBooks;
+        } catch (SQLException e) {
+            throw new DatabaseCustomException(e.getMessage(), e.getSQLState(), e.getErrorCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
+    }
+
+    public static void deleteAll() throws DatabaseCustomException {
+        try (Connection connection = DriverManager.getConnection("jdbc:sqlite:memory")) {
+            Statement statement = connection.createStatement();
+            statement.executeUpdate("DELETE FROM table1");
         } catch (SQLException e) {
             throw new DatabaseCustomException(e.getMessage(), e.getSQLState(), e.getErrorCode());
         } catch (Exception e) {
